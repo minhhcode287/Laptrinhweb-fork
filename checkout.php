@@ -1,9 +1,26 @@
 <?php
  include 'include/header.php';
   $cuser = new auth();
+
+  // Guard: nếu chưa đăng nhập → redirect login, tránh Fatal Error
+  if (!isset($_SESSION['uid']) || empty($_SESSION['uid'])) {
+      header('Location: login.php');
+      exit;
+  }
+
   $user_id = $_SESSION['uid'];
-  $result = $cuser->checkOut_fetch($user_id);
-  $result1 = $cuser->checkOut_product($user_id);
+  $result   = $cuser->checkOut_fetch($user_id);
+  $result1  = $cuser->checkOut_product($user_id);
+
+  // Guard: nếu giỏ hàng rỗng, $result1 là mảng rỗng — đảm bảo không lỗi khi foreach
+  if (empty($result1)) {
+      $result1 = [];
+  }
+
+  // Guard: nếu $result (thông tin user/cart) không lấy được → dùng array rỗng tránh lỗi
+  if (empty($result)) {
+      $result = ['name'=>'', 'email'=>'', 'address'=>'', 'city'=>'', 'country'=>'', 'phone'=>''];
+  }
 
 ?>
 		<!-- /NAVIGATION -->
@@ -118,7 +135,7 @@
 								?>
 								<div class="order-col">
 									<div> <?php echo $row['p_name']?></div>
-									<div><?php echo $product_qty;?> x Rs : <?php echo $row['p_price']?> = <?php echo $total;?></div>
+									<div><?php echo $product_qty;?> x <?php echo number_format($row['p_price'], 0, ',', '.') . ' ₫'; ?> = <?php echo $total;?></div>
 								</div>
 							<?php
 								 }
@@ -137,7 +154,7 @@
 							</div>
 							<div class="order-col">
 								<div><strong>TOTAL</strong></div>
-								<div><strong class="order-total">Rs : <?php echo $cart_total;?></strong></div>
+								<div><strong class="order-total"><?php echo number_format($cart_total, 0, ',', '.') . ' ₫'; ?></strong></div>
 							</div>
 						</div>
 						<!-- <div class="payment-method">
@@ -240,11 +257,14 @@
 
 				$.ajax({
 					method: "POST",
-					url: "../admin/include/process.php",
+					url: "admin/include/process.php",
 					data: "Mode=order_place&" + $('#order_place').serialize(),
 					success: function (data) {
 						swal("Good Job!" , data , "success");
 						 $('.swal-button--confirm').on('click',()=>window.location.reload())
+					},
+					error: function(xhr, status, err) {
+						swal("Error", "Could not place order. Please try again. (" + status + ")", "error");
 					}
 				});
 			})

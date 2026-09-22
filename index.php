@@ -94,14 +94,14 @@
 									$images = $row['images'];  
 									$new_images = explode(",", $images);
 
-									// Fix: Check if at least one image exists, fallback to first if not
-									$product_image = '';
-									if (isset($new_images[1]) && !empty($new_images[1])) {
-										$product_image = $new_images[1];
-									} elseif (isset($new_images[0]) && !empty($new_images[0])) {
-										$product_image = $new_images[0];
-									} else {
-										$product_image = 'default.png'; // fallback image
+									// Lấy ảnh đầu tiên tồn tại trong uploads/, fallback default.png
+									$product_image = 'default.png';
+									foreach ($new_images as $_ic) {
+										$_ic = basename(trim(str_replace('../../uploads/', '', $_ic)));
+										if ($_ic !== '' && file_exists(__DIR__ . '/uploads/' . $_ic)) {
+											$product_image = $_ic;
+											break;
+										}
 									}
 							?>
 							<div class="col-md-3 col-xs-6 product-item" <?php if($count >= 16) echo 'style="display:none;"'; ?>>
@@ -124,7 +124,7 @@
 										</div>
 										<div class="product-body">
 											<h3 class="product-name"><a href="product.php?p_id=<?php echo $row['id']?>"><?php echo htmlspecialchars($row['p_name'])?></a></h3>
-											<h4 class="product-price">Rs : <?php echo htmlspecialchars($row['p_price'])?> <del class="product-old-price">Rs : <?php echo htmlspecialchars($row['p_discount'])?></del></h4>
+											<h4 class="product-price"><?php echo number_format($row['p_price'], 0, ',', '.') . ' ₫'; ?> <del class="product-old-price"><?php echo number_format($row['p_discount'], 0, ',', '.') . ' ₫'; ?></del></h4>
 											<?php
 												$p_id = $row['id'];
 												$result1 = $product->total_reviews($p_id);
@@ -247,7 +247,17 @@
 								<a href="product.php?p_id=<?php echo $row['product_id']?>">	
 								<div class="product">
 									<div class="product-img">
-										<img width="100px" height="280px" src="./uploads/<?php echo $new_images[0]?>" alt="">
+										<?php
+									$_ts_img = 'default.png';
+									foreach ($new_images as $_candidate) {
+										$_candidate = basename(trim(str_replace('../../uploads/', '', $_candidate)));
+										if ($_candidate !== '' && file_exists(__DIR__ . '/uploads/' . $_candidate)) {
+											$_ts_img = $_candidate;
+											break;
+										}
+									}
+								?>
+								<img width="100px" height="280px" src="./uploads/<?php echo htmlspecialchars($_ts_img); ?>" alt="">
 										<div class="product-label">
 											<?php $percent = ( ($row['p_discount'] - $row['p_price'] ) * 100) / $row['p_discount'];?>
 											<span class="sale"><?php echo ceil($percent);?>%</span>
@@ -255,7 +265,7 @@
 									</div>
 									<div class="product-body">
 										<h3 class="product-name"><a href="product.php?p_id=<?php echo $row['product_id']?>"><?php echo $row['p_name']?></a></h3>
-										<h4 class="product-price">Rs : <?php echo $row['p_price']?> <del class="product-old-price">Rs : <?php echo $row['p_discount']?></del></h4>
+										<h4 class="product-price"><?php echo number_format($row['p_price'], 0, ',', '.') . ' ₫'; ?> <del class="product-old-price"><?php echo number_format($row['p_discount'], 0, ',', '.') . ' ₫'; ?></del></h4>
 										<?php
 										$p_id = $row['product_id'];
 										$result3 = $product->total_reviews($p_id);
@@ -402,3 +412,4 @@ currentTime(); /* calling currentTime() function to initiate the process */
 
 	</body>
 </html>
+

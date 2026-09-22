@@ -147,7 +147,17 @@
 								<a href="product.php?p_id=<?php echo $row['id']?>">	
 									<div class="product">
 										<div class="product-img">
-											<img width="100px" height="280px" src="./uploads/<?php echo htmlspecialchars($new_images[0]); ?>" alt="<?php echo htmlspecialchars($row['p_name'] ?? ''); ?>">
+											<?php
+									$_st_img = 'default.png';
+									foreach ($new_images as $_candidate) {
+										$_candidate = basename(trim(str_replace('../../uploads/', '', $_candidate)));
+										if ($_candidate !== '' && file_exists(__DIR__ . '/uploads/' . $_candidate)) {
+											$_st_img = $_candidate;
+											break;
+										}
+									}
+								?>
+								<img width="100px" height="280px" src="./uploads/<?php echo htmlspecialchars($_st_img); ?>" alt="<?php echo htmlspecialchars($row['p_name'] ?? ''); ?>">
 											<div class="product-label">
 												<?php if ($percent > 0): ?>
 													<span class="sale"><?php echo ceil($percent); ?>%</span>
@@ -163,9 +173,9 @@
 												<a href="product.php?p_id=<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['p_name'] ?? ''); ?></a>
 											</h3>
 											<h4 class="product-price">
-												Rs <?php echo htmlspecialchars($row['p_price']); ?>
+												<?php echo number_format($row['p_price'], 0, ',', '.') . ' ₫'; ?>
 												<?php if ($row['p_discount'] > 0 && $row['p_discount'] > $row['p_price']) { ?>
-													<del class="product-old-price">Rs <?php echo htmlspecialchars($row['p_discount']); ?></del>
+													<del class="product-old-price"><?php echo number_format($row['p_discount'], 0, ',', '.') . ' ₫'; ?></del>
 												<?php } ?>
 											</h4>
 											<?php

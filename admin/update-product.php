@@ -99,13 +99,27 @@
                                                 </select>
                                             </div>
                                             <div class="form-group col-md-8">
-                                                <label for="inputZip">Product Image</label>
+                                                <label for="inputZip">Product Image <small class="text-muted">(Leave empty to keep existing images)</small></label>
                                                 <input type="file" multiple name="img[]" class="form-control" id="inputZip">
+                                                <input type="hidden" name="old_images" value="<?php echo htmlspecialchars($row['images'] ?? ''); ?>">
+                                                <?php if (!empty($row['images'])): ?>
+                                                    <div class="mt-2">
+                                                        <small class="text-muted d-block mb-1">Current images:</small>
+                                                        <?php 
+                                                            $cur_imgs = explode(',', $row['images']);
+                                                            foreach ($cur_imgs as $ci):
+                                                                $ci = trim(str_replace('../../uploads/', '', $ci));
+                                                                $disp = file_exists(__DIR__ . '/../uploads/' . $ci) ? $ci : 'default.png';
+                                                        ?>
+                                                            <img src="../uploads/<?php echo htmlspecialchars($disp); ?>" width="55" height="55" style="object-fit:cover; margin-right:6px; border:1px solid #ccc; border-radius:4px;" alt="current image">
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                          
                                       <input type="submit" class="btn btn-primary float-right mt-1" name="update_product" value="Publish Product">
-                                    </form
+                                    </form>
                                 </div>
                             </div>
                         </div>
