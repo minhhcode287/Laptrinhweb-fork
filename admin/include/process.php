@@ -197,36 +197,51 @@
             $p_price = $cuser->test_input($_POST['p_price']);
             $p_quantity = $cuser->test_input($_POST['p_quantity']);
             $p_color = $cuser->test_input($_POST['p_color']);
-            $img_2 = "";
-            // count total files
-            foreach ($_FILES['img']['tmp_name'] as $key => $val) {
-              $img_name = $_FILES['img']['name'][$key];
-              $img_size = $_FILES['img']['size'][$key];
-              $img_tmp = $_FILES['img']['tmp_name'][$key];
-              $img_type = $_FILES['img']['type'][$key];
-  
-              $tmp = explode('.', $_FILES['img']['name'][$key]);
-              $img_ext = strtolower(end($tmp));
-  
-              $extensions = array("jpeg", "jpg", "png");
-  
-              if (in_array($img_ext, $extensions) === false) {
-                  header("Location: profile.php?alert=invalid_type");
-              }
-  
-              if ($img_size > 5 * 1024 * 1024) {
-                  header("Location: profile.php?alert=Too_Big_img");
-              }
-  
-              if (empty($errors) == true) {
-                  $img = "../../uploads/" . uniqid("img_") . "." . $img_ext;
-                  move_uploaded_file($img_tmp, $img);
-                  $img_2 .= $img . ',';
-              }
-          }
-          $img_2 = substr($img_2, 0, -1);
+
+            $upload_dir = dirname(dirname(__DIR__)) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+
+            $uploaded_filenames = [];
+            $allowed_extensions = array("jpeg", "jpg", "png", "webp", "gif");
+
+            if (isset($_FILES['img']) && is_array($_FILES['img']['name'])) {
+                foreach ($_FILES['img']['name'] as $key => $orig_name) {
+                    if (empty($orig_name) || $_FILES['img']['error'][$key] === UPLOAD_ERR_NO_FILE) {
+                        continue;
+                    }
+                    if ($_FILES['img']['error'][$key] !== UPLOAD_ERR_OK) {
+                        continue;
+                    }
+
+                    $img_size = $_FILES['img']['size'][$key];
+                    $img_tmp  = $_FILES['img']['tmp_name'][$key];
+                    $img_ext  = strtolower(pathinfo($orig_name, PATHINFO_EXTENSION));
+
+                    if (!in_array($img_ext, $allowed_extensions)) {
+                        continue;
+                    }
+                    if ($img_size > 10 * 1024 * 1024) {
+                        continue;
+                    }
+
+                    $unique_filename = uniqid("img_") . "_" . time() . "." . $img_ext;
+                    $dest_path = $upload_dir . $unique_filename;
+
+                    if (move_uploaded_file($img_tmp, $dest_path)) {
+                        $uploaded_filenames[] = $unique_filename;
+                    }
+                }
+            }
+
+            if (!empty($uploaded_filenames)) {
+                $img_2 = implode(',', $uploaded_filenames);
+            } else {
+                $img_2 = 'default.png';
+            }
             
-                $result =  $cuser->insert_product($cat_id,
+            $result = $cuser->insert_product($cat_id,
                                              $sub_cat_id,
                                              $p_name,
                                              $p_description,
@@ -235,12 +250,14 @@
                                              $p_quantity,
                                              $p_color,
                                              $img_2);
-                                             
 
-             if($result)
-             {
-                 header('location:../product.php');
-             }                                
+            if ($result) {
+                header('location:../product.php');
+                exit();
+            } else {
+                echo "<script>alert('Failed to insert product'); window.location.href='../add-product.php';</script>";
+                exit();
+            }
         }
 
    
@@ -270,7 +287,7 @@
         }
 
         if (isset($_POST['update_product']))
-         { 
+        { 
             $product_id = $cuser->test_input($_POST['p_hidden']);
             $cat_id = $cuser->test_input($_POST['category']);
             $sub_cat_id = $cuser->test_input($_POST['sub_category']);
@@ -281,35 +298,66 @@
             $p_price = $cuser->test_input($_POST['p_price']);
             $p_quantity = $cuser->test_input($_POST['p_quantity']);
             $p_color = $cuser->test_input($_POST['p_color']);
-            $img_2 = "";
-            // count total files
-            foreach ($_FILES['img']['tmp_name'] as $key => $val) {
-              $img_name = $_FILES['img']['name'][$key];
-              $img_size = $_FILES['img']['size'][$key];
-              $img_tmp = $_FILES['img']['tmp_name'][$key];
-              $img_type = $_FILES['img']['type'][$key];
-  
-              $tmp = explode('.', $_FILES['img']['name'][$key]);
-              $img_ext = strtolower(end($tmp));
-  
-              $extensions = array("jpeg", "jpg", "png");
-  
-              if (in_array($img_ext, $extensions) === false) {
-                  header("Location: profile.php?alert=invalid_type");
-              }
-  
-              if ($img_size > 5 * 1024 * 1024) {
-                  header("Location: profile.php?alert=Too_Big_img");
-              }
-  
-              if (empty($errors) == true) {
-                  $img = "../../uploads/" . uniqid("img_") . "." . $img_ext;
-                  move_uploaded_file($img_tmp, $img);
-                  $img_2 .= $img . ',';
-              }
-          }
-                $img_2 = substr($img_2, 0, -1);
-                $result = $cuser->update_product($product_id,
+
+            $upload_dir = dirname(dirname(__DIR__)) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+
+            $uploaded_filenames = [];
+            $allowed_extensions = array("jpeg", "jpg", "png", "webp", "gif");
+
+            if (isset($_FILES['img']) && is_array($_FILES['img']['name'])) {
+                foreach ($_FILES['img']['name'] as $key => $orig_name) {
+                    if (empty($orig_name) || $_FILES['img']['error'][$key] === UPLOAD_ERR_NO_FILE) {
+                        continue;
+                    }
+                    if ($_FILES['img']['error'][$key] !== UPLOAD_ERR_OK) {
+                        continue;
+                    }
+
+                    $img_size = $_FILES['img']['size'][$key];
+                    $img_tmp  = $_FILES['img']['tmp_name'][$key];
+                    $img_ext  = strtolower(pathinfo($orig_name, PATHINFO_EXTENSION));
+
+                    if (!in_array($img_ext, $allowed_extensions)) {
+                        continue;
+                    }
+                    if ($img_size > 10 * 1024 * 1024) {
+                        continue;
+                    }
+
+                    $unique_filename = uniqid("img_") . "_" . time() . "." . $img_ext;
+                    $dest_path = $upload_dir . $unique_filename;
+
+                    if (move_uploaded_file($img_tmp, $dest_path)) {
+                        $uploaded_filenames[] = $unique_filename;
+                    }
+                }
+            }
+
+            if (!empty($uploaded_filenames)) {
+                // New images uploaded successfully
+                $img_2 = implode(',', $uploaded_filenames);
+            } else {
+                // Keep existing images - do not lose old images
+                $old_img = isset($_POST['old_images']) ? trim($_POST['old_images']) : '';
+                if (empty($old_img)) {
+                    $curr_prod = $cuser->select_products($product_id);
+                    $old_img = $curr_prod['images'] ?? 'default.png';
+                }
+                $old_list = explode(',', $old_img);
+                $clean_list = [];
+                foreach ($old_list as $oi) {
+                    $oi = trim(str_replace('../../uploads/', '', $oi));
+                    if (!empty($oi)) {
+                        $clean_list[] = $oi;
+                    }
+                }
+                $img_2 = !empty($clean_list) ? implode(',', $clean_list) : 'default.png';
+            }
+
+            $result = $cuser->update_product($product_id,
                                              $cat_id,
                                              $sub_cat_id,
                                              $p_name,
@@ -319,11 +367,14 @@
                                              $p_quantity,
                                              $p_color,
                                              $img_2);
-               if($result)
-               {
+            if ($result) {
                 header("location:../product.php");
-               }                              
-             }
+                exit();
+            } else {
+                echo "<script>alert('Failed to update product'); window.location.href='../update-product.php?p_id=" . $product_id . "';</script>";
+                exit();
+            }
+        }
 
              if(isset($_GET['pending_change']))
              {
@@ -434,10 +485,20 @@
               
               if(isset($_POST['Mode']) && $_POST['Mode'] == "order_place")
               {
-                 $product_id = $cuser->test_input($_POST['p_id']);
-                 $user_id = $_SESSION['uid'];
+                 // Guard: session phải còn hiệu lực
+                 if (!isset($_SESSION['uid']) || empty($_SESSION['uid'])) {
+                     echo 'Session expired. Please login again.';
+                     exit;
+                 }
+                 // Guard: validate dữ liệu đầu vào bắt buộc
+                 if (empty($_POST['p_id']) || empty($_POST['shipping_address']) || empty($_POST['total_price'])) {
+                     echo 'Missing required order information.';
+                     exit;
+                 }
+                 $product_id       = $cuser->test_input($_POST['p_id']);
+                 $user_id          = $_SESSION['uid'];
                  $shipping_address = $cuser->test_input($_POST['shipping_address']);
-                 $total = $cuser->test_input($_POST['total_price']);
+                 $total            = $cuser->test_input($_POST['total_price']);
                
                  $result = $cuser->order_place($product_id,$user_id,$shipping_address,$total);
                

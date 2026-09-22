@@ -96,7 +96,7 @@
                                         </div>
                             
                                       <input type="submit" class="btn btn-primary float-right mt-1" name="submit_product" value="Publish Product">
-                                    </form
+                                    </form>
                                 </div>
                             </div>
                         </div>
