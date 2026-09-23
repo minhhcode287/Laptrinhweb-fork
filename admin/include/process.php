@@ -574,12 +574,10 @@
                     }
 
                     if (isset($_GET['search']) && (!empty($_GET['search'])))
-                     {
-                        $query = $_GET['search_input'];
-                        $result = $cuser->search_form($query);
-                        if ($result) {
-                            header('location:./../store.php');
-                        }
+                    {
+                        $query = isset($_GET['search_input']) ? trim($_GET['search_input']) : trim($_GET['search']);
+                        header('location:../../store.php?search=' . urlencode($query));
+                        exit();
                     }
 
 
