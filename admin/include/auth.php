@@ -913,14 +913,333 @@ class auth extends database{
                     return true ;
                   }
 
+                  public function parse_smart_search($raw_query)
+                  {
+                      $parsed = [
+                          'keyword' => '',
+                          'category' => '',
+                          'brand' => '',
+                          'min_price' => null,
+                          'max_price' => null,
+                          'spec' => '',
+                      ];
+
+                      $q = trim($raw_query);
+                      if (empty($q)) {
+                          return $parsed;
+                      }
+
+                      $work_q = ' ' . $q . ' ';
+
+                      // 1. Detect Price Range Patterns
+                      // "từ X triệu đến Y triệu" / "từ X tr đến Y tr"
+                      if (preg_match('/(?:từ|tu)\s*(\d+(?:[.,]\d+)?)\s*(?:triệu|trieu|tr)?\s*(?:đến|den|-)\s*(\d+(?:[.,]\d+)?)\s*(?:triệu|trieu|tr)\b/iu', $work_q, $m)) {
+                          $min = floatval(str_replace(',', '.', $m[1])) * 1000000;
+                          $max = floatval(str_replace(',', '.', $m[2])) * 1000000;
+                          $parsed['min_price'] = (int)$min;
+                          $parsed['max_price'] = (int)$max;
+                          $work_q = str_replace($m[0], ' ', $work_q);
+                      }
+                      // "dưới 30 triệu" / "dưới 30tr" / "< 30tr" / "tối đa 30 triệu"
+                      elseif (preg_match('/(?:dưới|duoi|<|nhỏ hơn|nho hon|toi da|tối đa)\s*(\d+(?:[.,]\d+)?)\s*(?:triệu|trieu|tr)\b/iu', $work_q, $m)) {
+                          $val = floatval(str_replace(',', '.', $m[1])) * 1000000;
+                          $parsed['max_price'] = (int)$val;
+                          $work_q = str_replace($m[0], ' ', $work_q);
+                      }
+                      // "trên 15 triệu" / "trên 15tr" / "> 15tr" / "tối thiểu 15 triệu"
+                      elseif (preg_match('/(?:trên|tren|>|lớn hơn|lon hon|toi thieu|tối thiểu)\s*(\d+(?:[.,]\d+)?)\s*(?:triệu|trieu|tr)\b/iu', $work_q, $m)) {
+                          $val = floatval(str_replace(',', '.', $m[1])) * 1000000;
+                          $parsed['min_price'] = (int)$val;
+                          $work_q = str_replace($m[0], ' ', $work_q);
+                      }
+
+                      // 2. Detect Category
+                      $category_keywords = [
+                          'Laptop' => ['laptop', 'máy tính xách tay', 'may tinh xach tay'],
+                          'Điện thoại' => ['điện thoại', 'dien thoai', 'smartphone', 'phone'],
+                          'Máy ảnh' => ['máy ảnh', 'may anh', 'camera', 'cameras'],
+                          'Phụ kiện' => ['phụ kiện', 'phu kien', 'accessories'],
+                          'Bàn phím' => ['bàn phím', 'ban phim', 'keyboard'],
+                          'Chuột' => ['chuột', 'chuot', 'mouse'],
+                          'Tai nghe' => ['tai nghe', 'headphone', 'earphone'],
+                          'Màn hình' => ['màn hình', 'man hinh', 'monitor'],
+                      ];
+
+                      foreach ($category_keywords as $cat_label => $synonyms) {
+                          foreach ($synonyms as $syn) {
+                              if (preg_match('/\b' . preg_quote($syn, '/') . '\b/iu', $work_q, $cm)) {
+                                  $parsed['category'] = $cat_label;
+                                  $work_q = preg_replace('/\b' . preg_quote($syn, '/') . '\b/iu', ' ', $work_q);
+                                  break 2;
+                              }
+                          }
+                      }
+
+                      // 3. Detect Brand
+                      $known_brands = [
+                          'Apple' => ['apple', 'macbook'],
+                          'Dell' => ['dell'],
+                          'HP' => ['hp'],
+                          'ASUS' => ['asus'],
+                          'Lenovo' => ['lenovo'],
+                          'Samsung' => ['samsung'],
+                          'Sony' => ['sony'],
+                          'Canon' => ['canon'],
+                          'NVIDIA' => ['nvidia'],
+                          'Logitech' => ['logitech'],
+                          'Keychron' => ['keychron'],
+                          'Anker' => ['anker'],
+                          'GoPro' => ['gopro'],
+                          'Haier' => ['haier'],
+                      ];
+
+                      foreach ($known_brands as $brand_name => $patterns) {
+                          foreach ($patterns as $bp) {
+                              if (preg_match('/\b' . preg_quote($bp, '/') . '\b/iu', $work_q, $bm)) {
+                                  $parsed['brand'] = $brand_name;
+                                  break 2;
+                              }
+                          }
+                      }
+
+                      // 4. Detect Common Specs (RTX, RAM, Storage, CPU)
+                      $spec_patterns = [
+                          '/\b(rtx(?:\s*\d{3,4})?(?:\s*ti)?)\b/iu',
+                          '/\b(\d+\s*gb\s*(?:ram|ddr\d?)?)\b/iu',
+                          '/\b(\d+\s*(?:gb|tb)\s*(?:ssd|hdd|rom)?)\b/iu',
+                          '/\b(core\s*i[3579]|ultra\s*[579]|m[1234])\b/iu',
+                      ];
+                      $found_specs = [];
+                      foreach ($spec_patterns as $sp) {
+                          if (preg_match_all($sp, $work_q, $sm)) {
+                              foreach ($sm[0] as $match_spec) {
+                                  $found_specs[] = trim($match_spec);
+                                  $work_q = str_replace($match_spec, ' ', $work_q);
+                              }
+                          }
+                      }
+                      if (!empty($found_specs)) {
+                          $parsed['spec'] = implode(' ', $found_specs);
+                      }
+
+                      // Clean remaining words into keyword
+                      $work_q = preg_replace('/\b(?:có|co|loại|loai|chính hãng|chinh hang|giá|gia)\b/iu', ' ', $work_q);
+                      $work_q = trim(preg_replace('/\s+/', ' ', $work_q));
+                      
+                      if (empty($work_q)) {
+                          if (!empty($parsed['keyword'])) {
+                              // already set
+                          } elseif (!empty($parsed['spec'])) {
+                              $parsed['keyword'] = $parsed['spec'];
+                          } elseif (!empty($parsed['brand'])) {
+                              $parsed['keyword'] = $parsed['brand'];
+                          }
+                      } else {
+                          $parsed['keyword'] = $work_q;
+                      }
+
+                      return $parsed;
+                  }
+
+                  public function search_products($filters = [])
+                  {
+                      // If 'search' is provided, check smart search
+                      if (!empty($filters['search'])) {
+                          $smart = $this->parse_smart_search($filters['search']);
+                          if (!isset($filters['min_price']) && $smart['min_price'] !== null) {
+                              $filters['min_price'] = $smart['min_price'];
+                          }
+                          if (!isset($filters['max_price']) && $smart['max_price'] !== null) {
+                              $filters['max_price'] = $smart['max_price'];
+                          }
+                          if (empty($filters['brand']) && !empty($smart['brand'])) {
+                              $filters['brand'] = $smart['brand'];
+                          }
+                          if (empty($filters['cat_id']) && empty($filters['category']) && !empty($smart['category'])) {
+                              $filters['category'] = $smart['category'];
+                          }
+                          if (empty($filters['spec']) && !empty($smart['spec'])) {
+                              $filters['spec'] = $smart['spec'];
+                          }
+                          if (!empty($smart['keyword'])) {
+                              $filters['search_keyword'] = $smart['keyword'];
+                          } elseif (!empty($smart['category']) || !empty($smart['brand']) || !empty($smart['spec']) || $smart['min_price'] !== null || $smart['max_price'] !== null) {
+                              $filters['search_keyword'] = '';
+                          } else {
+                              $filters['search_keyword'] = $filters['search'];
+                          }
+                      } else {
+                          $filters['search_keyword'] = '';
+                      }
+
+                      $sql = "SELECT products.*, 
+                                     category.cat_name,
+                                     sub_category.sub_cat_name,
+                                     COALESCE(r.avg_rating, 0) as avg_rating,
+                                     COALESCE(r.review_count, 0) as review_count,
+                                     COALESCE(o.sell_count, 0) as sell_count
+                              FROM products
+                              LEFT JOIN category ON products.category_id = category.id
+                              LEFT JOIN sub_category ON products.sub_category_id = sub_category.id
+                              LEFT JOIN (
+                                  SELECT product_id, AVG(review_stars) as avg_rating, COUNT(id) as review_count 
+                                  FROM reviews 
+                                  GROUP BY product_id
+                              ) r ON products.id = r.product_id
+                              LEFT JOIN (
+                                  SELECT product_id, COUNT(id) as sell_count 
+                                  FROM orders 
+                                  GROUP BY product_id
+                              ) o ON products.id = o.product_id
+                              WHERE 1=1";
+
+                      $params = [];
+
+                      // Keyword search
+                      $kw = trim($filters['search_keyword'] ?? ($filters['search'] ?? ''));
+                      if (!empty($kw)) {
+                          $words = preg_split('/\s+/', $kw);
+                          $wConditions = [];
+                          foreach ($words as $idx => $word) {
+                              $w = trim($word);
+                              if (empty($w)) continue;
+                              $pName = ":kw_" . $idx;
+                              $pNameD = ":kwd_" . $idx;
+                              $pNameC = ":kwc_" . $idx;
+                              $pNameS = ":kws_" . $idx;
+                              $wConditions[] = "(CONVERT(products.p_name USING utf8mb4) LIKE $pName 
+                                               OR CONVERT(products.p_description USING utf8mb4) LIKE $pNameD 
+                                               OR CONVERT(category.cat_name USING utf8mb4) LIKE $pNameC 
+                                               OR CONVERT(sub_category.sub_cat_name USING utf8mb4) LIKE $pNameS" .
+                                               (is_numeric($w) ? " OR products.id = " . (int)$w : "") . ")";
+                              $term = '%' . $w . '%';
+                              $params[$pName] = $term;
+                              $params[$pNameD] = $term;
+                              $params[$pNameC] = $term;
+                              $params[$pNameS] = $term;
+                          }
+                          if (!empty($wConditions)) {
+                              $sql .= " AND (" . implode(' AND ', $wConditions) . ")";
+                          }
+                      }
+
+                      // Brand filter
+                      if (!empty($filters['brand'])) {
+                          $brand = trim($filters['brand']);
+                          $sql .= " AND (CONVERT(sub_category.sub_cat_name USING utf8mb4) LIKE :brand_filter 
+                                       OR CONVERT(products.p_name USING utf8mb4) LIKE :brand_name_filter 
+                                       OR CONVERT(products.p_description USING utf8mb4) LIKE :brand_desc_filter)";
+                          $params[':brand_filter'] = '%' . $brand . '%';
+                          $params[':brand_name_filter'] = ($brand === 'Apple') ? '%MacBook%' : ('%' . $brand . '%');
+                          $params[':brand_desc_filter'] = '%' . $brand . '%';
+                      }
+
+                      // Category filter
+                      if (!empty($filters['cat_id']) && is_numeric($filters['cat_id'])) {
+                          $sql .= " AND products.category_id = :cat_id_filter";
+                          $params[':cat_id_filter'] = (int)$filters['cat_id'];
+                      } elseif (!empty($filters['category'])) {
+                          $catStr = trim($filters['category']);
+                          if (stripos($catStr, 'laptop') !== false || stripos($catStr, 'máy tính') !== false) {
+                              $sql .= " AND (CONVERT(category.cat_name USING utf8mb4) LIKE '%Laptop%' OR CONVERT(category.cat_name USING utf8mb4) LIKE '%Macbook%' OR products.category_id IN (51, 52, 54, 55, 56, 57))";
+                          } elseif (stripos($catStr, 'camera') !== false || stripos($catStr, 'máy ảnh') !== false) {
+                              $sql .= " AND (CONVERT(category.cat_name USING utf8mb4) LIKE '%Camera%' OR products.category_id = 59)";
+                          } elseif (stripos($catStr, 'phụ kiện') !== false || stripos($catStr, 'access') !== false) {
+                              $sql .= " AND (CONVERT(category.cat_name USING utf8mb4) LIKE '%Accessorie%' OR products.category_id = 58)";
+                          } elseif (stripos($catStr, 'điện thoại') !== false || stripos($catStr, 'phone') !== false) {
+                              $sql .= " AND (CONVERT(category.cat_name USING utf8mb4) LIKE '%Phone%' OR CONVERT(category.cat_name USING utf8mb4) LIKE '%Điện thoại%')";
+                          } else {
+                              $sql .= " AND (CONVERT(category.cat_name USING utf8mb4) LIKE :cat_name_str OR CONVERT(products.p_name USING utf8mb4) LIKE :cat_name_str2)";
+                              $params[':cat_name_str'] = '%' . $catStr . '%';
+                              $params[':cat_name_str2'] = '%' . $catStr . '%';
+                          }
+                      }
+
+                      // Min price
+                      if (isset($filters['min_price']) && is_numeric($filters['min_price']) && $filters['min_price'] > 0) {
+                          $sql .= " AND products.p_price >= :min_price_filter";
+                          $params[':min_price_filter'] = (int)$filters['min_price'];
+                      }
+
+                      // Max price
+                      if (isset($filters['max_price']) && is_numeric($filters['max_price']) && $filters['max_price'] > 0) {
+                          $sql .= " AND products.p_price <= :max_price_filter";
+                          $params[':max_price_filter'] = (int)$filters['max_price'];
+                      }
+
+                      // Stock filter
+                      if (!empty($filters['stock'])) {
+                          if ($filters['stock'] === 'in_stock' || $filters['stock'] === 'con_hang') {
+                              $sql .= " AND products.quantity > 0";
+                          } elseif ($filters['stock'] === 'low_stock' || $filters['stock'] === 'sap_het') {
+                              $sql .= " AND products.quantity > 0 AND products.quantity <= 10";
+                          } elseif ($filters['stock'] === 'out_of_stock' || $filters['stock'] === 'het_hang') {
+                              $sql .= " AND products.quantity <= 0";
+                          }
+                      }
+
+                      // Rating filter
+                      if (!empty($filters['rating']) && is_numeric($filters['rating']) && $filters['rating'] > 0) {
+                          $sql .= " AND COALESCE(r.avg_rating, 0) >= :min_rating_filter";
+                          $params[':min_rating_filter'] = (float)$filters['rating'];
+                      }
+
+                      // Promotion / On Sale
+                      if (!empty($filters['on_sale'])) {
+                          $sql .= " AND products.p_discount > products.p_price";
+                      }
+
+                      // Spec filter
+                      if (!empty($filters['spec'])) {
+                          $spec = trim($filters['spec']);
+                          $sql .= " AND (CONVERT(products.p_description USING utf8mb4) LIKE :spec_filter OR CONVERT(products.p_name USING utf8mb4) LIKE :spec_filter_name)";
+                          $params[':spec_filter'] = '%' . $spec . '%';
+                          $params[':spec_filter_name'] = '%' . $spec . '%';
+                      }
+
+                      // Sorting
+                      $sort = $filters['sort'] ?? 'default';
+                      if ($sort === 'price_asc') {
+                          $sql .= " ORDER BY products.p_price ASC, products.id DESC";
+                      } elseif ($sort === 'price_desc') {
+                          $sql .= " ORDER BY products.p_price DESC, products.id DESC";
+                      } elseif ($sort === 'newest') {
+                          $sql .= " ORDER BY products.time_stamp DESC, products.id DESC";
+                      } elseif ($sort === 'top_selling') {
+                          $sql .= " ORDER BY sell_count DESC, products.id DESC";
+                      } elseif ($sort === 'rating_desc') {
+                          $sql .= " ORDER BY avg_rating DESC, products.id DESC";
+                      } elseif ($sort === 'discount_desc') {
+                          $sql .= " ORDER BY (products.p_discount - products.p_price) DESC, products.id DESC";
+                      } else {
+                          $sql .= " ORDER BY products.id DESC";
+                      }
+
+                      $stmt = $this->conn->prepare($sql);
+                      $stmt->execute($params);
+                      return $stmt->fetchAll(PDO::FETCH_ASSOC);
+                  }
+
                   public function search_form($query)
                   {
-                    $sql = "SELECT * FROM products WHERE p_name LIKE '%$query%' or p_price LIKE '%query%'";
-                    $stmt =$this->conn->prepare($sql);
-                    $stmt->bindParam(':query',$query);
-				            $stmt->execute();
-                    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                    return $result ;
+                      return $this->search_products(['search' => $query]);
+                  }
+
+                  public function get_available_brands()
+                  {
+                      return ['Apple', 'Dell', 'HP', 'ASUS', 'Lenovo', 'Samsung', 'Sony', 'Canon', 'NVIDIA', 'Logitech', 'Keychron', 'Anker', 'GoPro', 'Haier'];
+                  }
+
+                  public function get_categories_with_count()
+                  {
+                      $sql = "SELECT category.id, category.cat_name, COUNT(products.id) as product_count
+                              FROM category
+                              LEFT JOIN products ON category.id = products.category_id
+                              GROUP BY category.id, category.cat_name
+                              ORDER BY category.id ASC";
+                      $stmt = $this->conn->prepare($sql);
+                      $stmt->execute();
+                      return $stmt->fetchAll(PDO::FETCH_ASSOC);
                   }
 
                   public function get_category_name($cat_id)
