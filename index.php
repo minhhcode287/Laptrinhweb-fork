@@ -2,6 +2,18 @@
  include 'include/header.php';
  $product = new auth();
  $result = $product->products_fetch();
+
+ // Resolve real category IDs from database
+ $categories_list = $product->select_cat();
+ $cat_map = [];
+ if (is_array($categories_list)) {
+     foreach ($categories_list as $c) {
+         $cat_map[strtolower(trim($c['cat_name']))] = (int)$c['id'];
+     }
+ }
+ $cat_id_laptop = $cat_map['laptop'] ?? 57;
+ $cat_id_accessories = $cat_map['accessories'] ?? 58;
+ $cat_id_cameras = $cat_map['cameras'] ?? ($cat_map['camera'] ?? 59);
 ?>
 <style>
 	#clock {
@@ -19,45 +31,45 @@
 			<div class="container">
 				<!-- row -->
 				<div class="row">
-					<!-- shop -->
+					<!-- shop: Laptop Collection -->
 					<div class="col-md-4 col-xs-6">
-						<div class="shop">
+						<a href="store.php?cat_id=<?php echo $cat_id_laptop; ?>" class="shop" aria-label="Laptop Collection - Shop now">
 							<div class="shop-img">
-								<img src="./img/shop01.png" alt="">
+								<img src="./img/shop01.png" alt="Laptop Collection">
 							</div>
 							<div class="shop-body">
 								<h3>Laptop<br>Collection</h3>
-								<a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+								<span class="cta-btn">Shop now <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></span>
 							</div>
-						</div>
+						</a>
 					</div>
 					<!-- /shop -->
 
-					<!-- shop -->
+					<!-- shop: Accessories Collection -->
 					<div class="col-md-4 col-xs-6">
-						<div class="shop">
+						<a href="store.php?cat_id=<?php echo $cat_id_accessories; ?>" class="shop" aria-label="Accessories Collection - Shop now">
 							<div class="shop-img">
-								<img src="./img/shop03.png" alt="">
+								<img src="./img/shop03.png" alt="Accessories Collection">
 							</div>
 							<div class="shop-body">
 								<h3>Accessories<br>Collection</h3>
-								<a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+								<span class="cta-btn">Shop now <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></span>
 							</div>
-						</div>
+						</a>
 					</div>
 					<!-- /shop -->
 
-					<!-- shop -->
+					<!-- shop: Cameras Collection -->
 					<div class="col-md-4 col-xs-6">
-						<div class="shop">
+						<a href="store.php?cat_id=<?php echo $cat_id_cameras; ?>" class="shop" aria-label="Cameras Collection - Shop now">
 							<div class="shop-img">
-								<img src="./img/shop02.png" alt="">
+								<img src="./img/shop02.png" alt="Cameras Collection">
 							</div>
 							<div class="shop-body">
 								<h3>Cameras<br>Collection</h3>
-								<a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+								<span class="cta-btn">Shop now <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></span>
 							</div>
-						</div>
+						</a>
 					</div>
 					<!-- /shop -->
 				</div>
