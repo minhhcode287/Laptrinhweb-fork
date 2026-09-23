@@ -153,9 +153,22 @@
 												 $cart_total = $cart_total + ($row['p_price'] * $row['p_qty']);
                                                  
 											?>
+											<?php
+												$_cart_img = 'default.png';
+												if (!empty($row['images'])) {
+													$_c_imgs = explode(',', $row['images']);
+													foreach ($_c_imgs as $_c_cand) {
+														$_c_cand = basename(trim(str_replace('../../uploads/', '', $_c_cand)));
+														if ($_c_cand !== '' && file_exists(__DIR__ . '/../uploads/' . $_c_cand)) {
+															$_cart_img = $_c_cand;
+															break;
+														}
+													}
+												}
+											?>
 											<div class="product-widget">
 												<div class="product-img">
-													<img src="./img/product01.png" alt="">
+													<img src="uploads/<?php echo htmlspecialchars($_cart_img); ?>" alt="<?php echo htmlspecialchars($row['p_name']); ?>">
 												</div>
 												<div class="product-body">
 													<h3 class="product-name"><a href="product.php?p_id=<?php echo $row['id']?>"><?php echo $row['p_name']?></a></h3>
@@ -169,7 +182,7 @@
 										</div>
 										<div class="cart-summary">
 											<small><?php echo $count['count']?> Item(s) selected</small>
-											<h5>SUBTOTAL: <?php echo $cart_total;?></h5>
+											<h5>SUBTOTAL: <?php echo number_format($cart_total, 0, ',', '.') . ' ₫'; ?></h5>
 										</div>
 										<div class="cart-btns">
 											<a href="#">View Cart</a>

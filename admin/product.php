@@ -61,11 +61,21 @@
                                         <tr>
                                             <td><?php echo $row['id'];?></td>
                                             <td class="text-center">
-                                            <!-- <img width="100" height="100" src="./uploads/../../uploads/img_61138629d99bb.png" alt="img" class="profile-img"> -->
-                                                <img width="100" height="100" src="./uploads/<?php echo $new_img[0];?>" alt="img" class="profile-img">
+                                            
+                                                <?php
+    $_adm_img = "default.png";
+    foreach ($new_img as $_candidate) {
+        $_candidate = basename(trim(str_replace('../../uploads/', '', $_candidate)));
+        if ($_candidate !== "" && file_exists(__DIR__ . "/../uploads/" . $_candidate)) {
+            $_adm_img = $_candidate;
+            break;
+        }
+    }
+?>
+<img width="100" height="100" src="../uploads/<?php echo htmlspecialchars($_adm_img); ?>" alt="img" class="profile-img">
                                             </td>
                                             <td><?php echo $row['p_name'];?></td>
-                                            <td><?php echo $row['p_price'];?></td>
+                                            <td><?php echo number_format($row['p_price'], 0, ',', '.') . ' ₫';?></td>
                                             <td><?php echo $row['quantity'];?></td>
                                             <td><?php echo $row['p_colour'];?></td>
                                             <!-- <td class="text-center"><span class="shadow-none badge badge-danger">Closed</span></td> -->

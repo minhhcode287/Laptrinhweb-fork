@@ -53,6 +53,21 @@ else {
 						    // foreach($row as $r){
 								$image = $row['images'];
 								$my_images = explode(",", $image);
+
+					// === BẢO VỆ ẢNH: kiểm tra file_exists, đảm bảo 5 slots ===
+					$_safe_imgs = array();
+					foreach ($my_images as $_raw) {
+						$_raw = basename(trim(str_replace('../../uploads/', '', $_raw)));
+						if ($_raw !== '' && file_exists(__DIR__ . '/uploads/' . $_raw)) {
+							$_safe_imgs[] = $_raw;
+						}
+					}
+					// Nếu không có ảnh nào tồn tại, dùng default.png
+					$_fallback = !empty($_safe_imgs) ? $_safe_imgs[0] : 'default.png';
+					// Đảm bảo $my_images luôn có đủ index [0]..[4]
+					for ($_ki = 0; $_ki < 5; $_ki++) {
+						$my_images[$_ki] = isset($_safe_imgs[$_ki]) ? $_safe_imgs[$_ki] : $_fallback;
+					}
 								// print_r($my_images);
 
 
@@ -123,7 +138,7 @@ else {
 								<a class="review-link" href="#">10 Review(s) | Add your review</a>
 							</div>
 							<div>
-								<h3 class="product-price">Rs : <?php echo $row['p_price']?> <del class="product-old-price">Rs : <?php echo $row['p_discount']?></del></h3>
+								<h3 class="product-price"><?php echo number_format($row['p_price'], 0, ',', '.') . ' ₫'; ?> <del class="product-old-price"><?php echo number_format($row['p_discount'], 0, ',', '.') . ' ₫'; ?></del></h3>
 								<?php 
 								 if($row['quantity'] >=0){
 									 echo "<span class='product-available'>In Stock</span>";
@@ -421,13 +436,20 @@ else {
 									 {
                                        $images = $row['images'];  
 									   $new_images = explode(",", $images);
-                                    							
+									   $_rec_safe_img = 'default.png';
+									   foreach ($new_images as $_ri) {
+										   $_ri = basename(trim(str_replace('../../uploads/', '', $_ri)));
+										   if ($_ri !== '' && file_exists(__DIR__ . '/uploads/' . $_ri)) {
+											   $_rec_safe_img = $_ri;
+											   break;
+										   }
+									   }
 									?>
 							<div class="col-md-3 col-xs-6">
 							<a href="product.php?p_id=<?php echo $row['product_id']?>">	
 							<div class="product">
 									<div class="product-img">
-										<img width="100px" height="280px" src="./uploads/<?php echo $new_images[0]?>" alt="">
+										<img width="100px" height="280px" src="./uploads/<?php echo htmlspecialchars($_rec_safe_img); ?>" alt="">
 										<div class="product-label">
 											<?php $percent = ( ($row['p_discount'] - $row['p_price'] ) * 100) / $row['p_discount'];?>
 											<span class="sale"><?php echo ceil($percent);?>%</span>
@@ -435,7 +457,7 @@ else {
 									</div>
 									<div class="product-body">
 										<h3 class="product-name"><a href="product.php?p_id=<?php echo $row['product_id']?>"><?php echo $row['p_name']?></a></h3>
-										<h4 class="product-price">Rs : <?php echo $row['p_price']?> <del class="product-old-price">Rs : <?php echo $row['p_discount']?></del></h4>
+										<h4 class="product-price"><?php echo number_format($row['p_price'], 0, ',', '.') . ' ₫'; ?> <del class="product-old-price"><?php echo number_format($row['p_discount'], 0, ',', '.') . ' ₫'; ?></del></h4>
 									<?php
 									$p_id = $row['product_id'];
 									$result3 = $product->total_reviews($p_id);

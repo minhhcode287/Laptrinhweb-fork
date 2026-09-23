@@ -66,7 +66,17 @@
 									 $cart_total = $cart_total + ($get_data['p_price'] * $values_1[1]);	
 								?>
                                             <td class="text-center">
-                                                <img width="100" height="100" src="./uploads/<?php echo $new_img[0];?>" alt="img" class="profile-img">
+                                                <?php
+    $_adm_img = "default.png";
+    foreach ($new_img as $_candidate) {
+        $_candidate = trim($_candidate);
+        if ($_candidate !== "" && file_exists(__DIR__ . "/../uploads/" . $_candidate)) {
+            $_adm_img = $_candidate;
+            break;
+        }
+    }
+?>
+<img width="100" height="100" src="../uploads/<?php echo htmlspecialchars($_adm_img); ?>" alt="img" class="profile-img">
                                             </td>                                    
                                     <td><?php echo $get_data['p_name'];?></td>
                                 
@@ -86,7 +96,7 @@
                                       <th>Product Name</th>
                                      <th>Product Price</th>
                                       <th>Product Quantity</th>
-                                 <td ><h5 class="text-danger">Total Price =<?php echo $viewOrders['total_price']?></h5></td>
+                                 <td ><h5 class="text-danger">Total Price = <?php echo number_format($viewOrders['total_price'], 0, ',', '.') . ' ₫'; ?></h5></td>
                              </tr>
                             </tfoot>
                         </table>

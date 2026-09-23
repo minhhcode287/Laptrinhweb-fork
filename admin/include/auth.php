@@ -6,40 +6,62 @@ class auth extends database{
     
  
         public function login_user($username,$password){
-          //join query will be used
-          $query = $this->conn->prepare("SELECT * FROM users WHERE username=? AND password=?");
-            $query->execute(array($username , $password));
+            $query = $this->conn->prepare("SELECT * FROM users WHERE username=?");
+            $query->execute(array($username));
             $control= $query->fetch(PDO::FETCH_ASSOC);
             $control_2 =$query->rowCount();
-            if($control_2  > 0)
+            
+            if($control_2 > 0)
             {
-           
-// echo $control['role'];
-              if($control['role'] == 1){
-                if (isset($_SESSION['isClient'])) {
-                  unset($_SESSION['isClient']); 
-                  unset($_SESSION['username']); 
-                  unset($_SESSION['uid']);
-                  }
-                    $_SESSION["username"] = $username;
-                    $_SESSION["role"] = $control['role'];
-                    $_SESSION["uid"] = $control['id'];
-                    $_SESSION['isAdmin'] = true;
-                header('location: ../index.php');
-              }else{
-                if (isset($_SESSION['isAdmin'])) {
-                  unset($_SESSION['isAdmin']);
-                  unset($_SESSION['username']);
-                  unset($_SESSION['uid']);
-                  }
-                  $_SESSION["username"] = $username;
-                  $_SESSION["uid"] = $control['id'];
-                  $_SESSION["role"] = $control['role'];
-                  $_SESSION['isClient'] = true;
-                header('location: ../../index.php');
-              }
+                $hashed_password = $control['password'];
+                $is_password_correct = false;
+
+                // Check if password matches (either hashed or plain text)
+                if (password_verify($password, $hashed_password)) {
+                    $is_password_correct = true;
+                } elseif ($password === $hashed_password) {
+                    $is_password_correct = true;
+                    // On-the-fly migration: hash the plain text password and update it in the database
+                    $new_hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $update_query = $this->conn->prepare("UPDATE users SET password=? WHERE id=?");
+                    $update_query->execute(array($new_hashed_password, $control['id']));
+                }
+
+                if ($is_password_correct) {
+                    if($control['role'] == 1){
+                        if (isset($_SESSION['isClient'])) {
+                            unset($_SESSION['isClient']); 
+                            unset($_SESSION['username']); 
+                            unset($_SESSION['uid']);
+                        }
+                        $_SESSION["username"] = $username;
+                        $_SESSION["role"] = $control['role'];
+                        $_SESSION["uid"] = $control['id'];
+                        $_SESSION['isAdmin'] = true;
+                        header('location: ../index.php');
+                        exit();
+                    } else {
+                        if (isset($_SESSION['isAdmin'])) {
+                            unset($_SESSION['isAdmin']);
+                            unset($_SESSION['username']);
+                            unset($_SESSION['uid']);
+                        }
+                        $_SESSION["username"] = $username;
+                        $_SESSION["uid"] = $control['id'];
+                        $_SESSION["role"] = $control['role'];
+                        $_SESSION['isClient'] = true;
+                        header('location: ../../index.php');
+                        exit();
+                    }
+                } else {
+                    echo "<script>alert('Invalid password.'); window.location.href='../../login.php';</script>";
+                    exit();
+                }
+            } else {
+                echo "<script>alert('Account does not exist.'); window.location.href='../../login.php';</script>";
+                exit();
             }
-      }
+        }
 
  
     // COde FOr Validation For Login and Register
@@ -68,7 +90,7 @@ class auth extends database{
 
     public function registeruser($name ,$username ,$email ,$address ,$phone ,$password, $city = '', $country = '')
     {
-        
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         $sql = "INSERT INTO users(name,username,email,address,city,country,phone,password) VALUES (:name,:username,:email,:address,:city,:country,:phone,:password)";
         $stmt = $this->conn->prepare($sql);
 
@@ -79,12 +101,13 @@ class auth extends database{
         $stmt->bindParam(':city', $city ,PDO::PARAM_STR);
         $stmt->bindParam(':country', $country ,PDO::PARAM_STR);
         $stmt->bindParam(':phone', $phone ,PDO::PARAM_STR);
-        $stmt->bindParam(':password', $password ,PDO::PARAM_STR);
+        $stmt->bindParam(':password', $hashed_password ,PDO::PARAM_STR);
         $result = $stmt->execute();
         if($result)
         {
           echo "<script>alert('Insert Successfully');</script>";
           header('location:../index.php');
+          exit();
           } 
           
     }
@@ -93,7 +116,7 @@ class auth extends database{
 
          public function front_end_registeruser($name ,$username ,$email ,$address ,$phone ,$password, $city = '', $country = '')
          {
-             
+             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
              $sql = "INSERT INTO users(name,username,email,address,city,country,phone,password) VALUES (:name,:username,:email,:address,:city,:country,:phone,:password)";
              $stmt = $this->conn->prepare($sql);
              $stmt->bindParam(':name', $name ,PDO::PARAM_STR);
@@ -103,13 +126,14 @@ class auth extends database{
              $stmt->bindParam(':city', $city ,PDO::PARAM_STR);
              $stmt->bindParam(':country', $country ,PDO::PARAM_STR);
              $stmt->bindParam(':phone', $phone ,PDO::PARAM_STR);
-             $stmt->bindParam(':password', $password ,PDO::PARAM_STR);
+             $stmt->bindParam(':password', $hashed_password ,PDO::PARAM_STR);
              $result = $stmt->execute();
             
              if($result)
              {
                echo "<script>alert('Insert Successfully');</script>";
-               header('location:./../login.php');
+               header('location:../../login.php');
+               exit();
                } 
                
          }
@@ -822,7 +846,7 @@ class auth extends database{
                     $result = $stmt->execute();
                     if($result)
                     {
-                      $sql2 = "DELETE FROM cart WHERE user_id= '$user_id'";
+                      $sql2 = "DELETE FROM cart WHERE user_id = :user_id";
                       $stmt=$this->conn->prepare($sql2);
                       $stmt->bindParam(':user_id' ,$user_id ,PDO::PARAM_INT);
                       $stmt->execute();
