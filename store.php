@@ -2,6 +2,7 @@
 
  include 'include/header.php';
  $product = new auth();
+ //toi la tuan//
  $result = $product->products_fetch();
 ?>
 
