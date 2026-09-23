@@ -2,6 +2,18 @@
  include 'include/header.php';
  $product = new auth();
  $result = $product->products_fetch();
+
+ // Fetch category data with product counts for collection banners
+ $all_categories = $product->get_categories_with_count();
+ $cat_by_name = [];
+ foreach ($all_categories as $c) {
+     $cat_by_name[strtolower(trim($c['cat_name']))] = $c;
+ }
+
+ // Database category mapping (Laptop: 57, Accessories: 58, Cameras: 59)
+ $cat_laptop = $cat_by_name['laptop'] ?? ['id' => 57, 'cat_name' => 'Laptop', 'product_count' => 3];
+ $cat_accessories = $cat_by_name['accessories'] ?? ['id' => 58, 'cat_name' => 'Accessories', 'product_count' => 3];
+ $cat_cameras = $cat_by_name['cameras'] ?? ($cat_by_name['camera'] ?? ['id' => 59, 'cat_name' => 'Cameras', 'product_count' => 3]);
 ?>
 <style>
 	#clock {
@@ -19,45 +31,48 @@
 			<div class="container">
 				<!-- row -->
 				<div class="row">
-					<!-- shop -->
+					<!-- shop: Laptop Collection -->
 					<div class="col-md-4 col-xs-6">
-						<div class="shop">
+						<a href="store.php?cat_id=<?php echo (int)$cat_laptop['id']; ?>" class="shop" aria-label="Laptop Collection - Shop now">
 							<div class="shop-img">
-								<img src="./img/shop01.png" alt="">
+								<img src="./img/shop01.png" alt="Laptop Collection">
 							</div>
 							<div class="shop-body">
+								<span class="shop-count"><i class="fa fa-tag"></i> <?php echo (int)$cat_laptop['product_count']; ?> <?php echo ((int)$cat_laptop['product_count'] == 1 ? 'Product' : 'Products'); ?></span>
 								<h3>Laptop<br>Collection</h3>
-								<a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+								<span class="cta-btn">Shop now <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></span>
 							</div>
-						</div>
+						</a>
 					</div>
 					<!-- /shop -->
 
-					<!-- shop -->
+					<!-- shop: Accessories Collection -->
 					<div class="col-md-4 col-xs-6">
-						<div class="shop">
+						<a href="store.php?cat_id=<?php echo (int)$cat_accessories['id']; ?>" class="shop" aria-label="Accessories Collection - Shop now">
 							<div class="shop-img">
-								<img src="./img/shop03.png" alt="">
+								<img src="./img/shop03.png" alt="Accessories Collection">
 							</div>
 							<div class="shop-body">
+								<span class="shop-count"><i class="fa fa-tag"></i> <?php echo (int)$cat_accessories['product_count']; ?> <?php echo ((int)$cat_accessories['product_count'] == 1 ? 'Product' : 'Products'); ?></span>
 								<h3>Accessories<br>Collection</h3>
-								<a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+								<span class="cta-btn">Shop now <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></span>
 							</div>
-						</div>
+						</a>
 					</div>
 					<!-- /shop -->
 
-					<!-- shop -->
+					<!-- shop: Cameras Collection -->
 					<div class="col-md-4 col-xs-6">
-						<div class="shop">
+						<a href="store.php?cat_id=<?php echo (int)$cat_cameras['id']; ?>" class="shop" aria-label="Cameras Collection - Shop now">
 							<div class="shop-img">
-								<img src="./img/shop02.png" alt="">
+								<img src="./img/shop02.png" alt="Cameras Collection">
 							</div>
 							<div class="shop-body">
+								<span class="shop-count"><i class="fa fa-tag"></i> <?php echo (int)$cat_cameras['product_count']; ?> <?php echo ((int)$cat_cameras['product_count'] == 1 ? 'Product' : 'Products'); ?></span>
 								<h3>Cameras<br>Collection</h3>
-								<a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+								<span class="cta-btn">Shop now <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></span>
 							</div>
-						</div>
+						</a>
 					</div>
 					<!-- /shop -->
 				</div>
