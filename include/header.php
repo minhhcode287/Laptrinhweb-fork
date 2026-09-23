@@ -104,9 +104,9 @@
 						<!-- SEARCH BAR -->
 						<div class="col-md-6">
 							<div class="header-search">
-								<form action="admin/include/process.php">
-									<input class="input" name="search_input" placeholder="Search here">
-									<input type="submit" class="search-btn btn" name="search"  value="Search">
+								<form method="GET" action="store.php">
+									<input class="input" name="search" placeholder="Search here" value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
+									<button type="submit" class="search-btn btn">Search</button>
 								</form>
 							</div>
 						</div>
